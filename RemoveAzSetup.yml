@@ -1,0 +1,27 @@
+trigger: none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  # Update the values below to match your environment
+  storage_account_name: "tfdevfastex"
+  resource_group_name: "rg_auxiliar"
+  resource_group_NetworkWatcherRG: "rg_auxiliar"
+  key_vault_name: "kvdevfastexx"
+  location: "eastus"
+  tfstate_container_name: "sadevffstate"
+
+steps:
+- task: AzureCLI@2
+  displayName: 'Delete Initial SetUp'
+  inputs:
+    azureSubscription: 'GeneralConnection'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      az keyvault delete --name $(key_vault_name) --resource-group $(resource_group_name) --location $(location)
+      az storage account delete --name $(storage_account_name) --resource-group $(resource_group_name)
+
+      az group delete --name $(resource_group_name) --yes
+      az group delete --name $(resource_group_NetworkWatcherRG) --yes

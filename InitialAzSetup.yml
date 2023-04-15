@@ -1,0 +1,41 @@
+trigger: none
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  # Set the names of the resource group, key vault, and storage account
+  resourceGroupName: 'rg_auxiliar'
+  keyVaultName: 'kvdevfastexx'
+  storageAccountName: 'sadevffstate'
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.x'
+    addToPath: true
+
+- task: AzureCLI@2
+  inputs:
+    azureSubscription: 'GeneralConnection'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      # Get the ID of the selected Azure subscription
+      subscriptionId=$(az account show --query id --output tsv)
+      
+      # Create resource group
+      az group create --name $(resourceGroupName) --location eastus --subscription $subscriptionId
+      
+      # Create storage account
+      az storage account create --name $(storageAccountName) --resource-group $(resourceGroupName) --sku Standard_LRS --encryption-services blob --https-only true --kind StorageV2 --subscription $subscriptionId
+
+      # Get the storage account key
+      storageAccountKey=$(az storage account keys list --account-name $(storageAccountName) --resource-group $(resourceGroupName) --query '[0].value' --output tsv --subscription $subscriptionId)
+      az storage container create --account-name $(storageAccountName) --account-key $storageAccountKey  --name sadevffstate
+
+      # Create key vault
+      az keyvault create --name $(keyVaultName) --resource-group $(resourceGroupName) --location eastus --subscription $subscriptionId
+
+      # Store the storage account key in the key vault
+      az keyvault secret set --name storageAccountKey --vault-name $(keyVaultName) --value $storageAccountKey --subscription $subscriptionId
